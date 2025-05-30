@@ -17,4 +17,5 @@ export default defineConfig({
             },
         }),
     ],
+    base: '/', // ✅ This prevents absolute http:// URLs in production
 });
