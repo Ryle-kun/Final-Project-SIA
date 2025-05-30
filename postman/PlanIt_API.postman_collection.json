@@ -1,0 +1,524 @@
+{
+  "info": {
+    "name": "PlanIt API",
+    "description": "API documentation for PlanIt - Personal Planning Assistant",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Skip for CSRF token request to avoid infinite loop",
+          "if (!pm.request.url.toString().includes('csrf-cookie')) {",
+          "    pm.sendRequest({",
+          "        url: pm.collectionVariables.get('base_url') + '/sanctum/csrf-cookie',",
+          "        method: 'GET'",
+          "    }, function (err, res) {",
+          "        if (err) {",
+          "            console.error('Error fetching CSRF token:', err);",
+          "            return;",
+          "        }",
+          "",
+          "        // Extract XSRF-TOKEN from cookies",
+          "        const cookies = res.headers.get('set-cookie');",
+          "        if (cookies) {",
+          "            const match = cookies.match(/XSRF-TOKEN=([^;]+)/);",
+          "            if (match) {",
+          "                const token = decodeURIComponent(match[1]);",
+          "                pm.collectionVariables.set('xsrf-token', token);",
+          "                pm.request.headers.upsert({",
+          "                    key: 'X-XSRF-TOKEN',",
+          "                    value: token",
+          "                });",
+          "            }",
+          "        }",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "xsrf-token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Store session cookie if login successful",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('is_authenticated', true);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Requested-With",
+                "value": "XMLHttpRequest",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"your-email@example.com\",\n    \"password\": \"your-password\"\n}"
+            },
+            "url": "{{base_url}}/login"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Requested-With",
+                "value": "XMLHttpRequest",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Requested-With",
+                "value": "XMLHttpRequest",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/tasks"
+          }
+        },
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Requested-With",
+                "value": "XMLHttpRequest",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Sample Task\",\n    \"description\": \"This is a sample task\",\n    \"due_date\": \"2024-03-20T12:00:00\"\n}"
+            },
+            "url": "{{base_url}}/api/tasks"
+          }
+        },
+        {
+          "name": "Complete Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Requested-With",
+                "value": "XMLHttpRequest",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/tasks/:taskId/complete",
+            "variable": [
+              {
+                "key": "taskId",
+                "value": "1"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-Requested-With",
+                "value": "XMLHttpRequest",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/tasks/:taskId",
+            "variable": [
+              {
+                "key": "taskId",
+                "value": "1"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weather",
+      "description": "Weather information endpoints used in the frontend",
+      "item": [
+        {
+          "name": "Get Current Weather",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/weather/current?city=London",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weather", "current"],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "London",
+                  "description": "City name"
+                }
+              ]
+            },
+            "description": "Get current weather information"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/weather/current?city=London"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "city": "London",
+                  "temperature": 18.5,
+                  "description": "Partly cloudy",
+                  "humidity": 65,
+                  "wind_speed": 12,
+                  "icon": "04d"
+                }
+              }
+            },
+            {
+              "name": "Error Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/weather/current?city=NonExistentCity"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "body": {
+                "status": "error",
+                "message": "City not found"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Timezone",
+      "description": "Timezone information endpoints used in the frontend",
+      "item": [
+        {
+          "name": "Get Timezone by City",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/timezone/city?city=Tokyo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "timezone", "city"],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "Tokyo",
+                  "description": "City name"
+                }
+              ]
+            },
+            "description": "Get timezone information for a city"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/timezone/city?city=Tokyo"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "timezone": "Asia/Tokyo",
+                  "current_time": "2024-03-15T19:00:00+09:00",
+                  "offset": "+09:00",
+                  "country": "Japan"
+                }
+              }
+            },
+            {
+              "name": "Error Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/timezone/city?city=NonExistentCity"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "body": {
+                "status": "error",
+                "message": "City not found or timezone information unavailable"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Holidays",
+      "description": "Holiday information endpoints used in the frontend",
+      "item": [
+        {
+          "name": "Get Month Holidays",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/holidays/month",
+            "description": "Get holidays for the current month"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/holidays/month"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": [
+                  {
+                    "name": "St. Patrick's Day",
+                    "date": "2024-03-17",
+                    "description": "Cultural and religious celebration",
+                    "type": "National holiday",
+                    "country": {
+                      "id": "IE",
+                      "name": "Ireland"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Error Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/holidays/month"
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "body": {
+                "status": "error",
+                "message": "Failed to fetch holiday data"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Year Holidays",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/holidays/year",
+            "description": "Get holidays for the current year"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/holidays/year"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": [
+                  {
+                    "name": "New Year's Day",
+                    "date": "2024-01-01",
+                    "description": "New Year's Day",
+                    "type": "National holiday",
+                    "country": {
+                      "id": "US",
+                      "name": "United States"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Error Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/holidays/year"
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "body": {
+                "status": "error",
+                "message": "Failed to fetch holiday data"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Quotes",
+      "description": "Quote endpoints used in the frontend",
+      "item": [
+        {
+          "name": "Get Random Quote",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/quotes/random",
+            "description": "Get a random inspirational quote"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/quotes/random"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "id": 1,
+                  "text": "The only way to do great work is to love what you do.",
+                  "author": "Steve Jobs"
+                }
+              }
+            },
+            {
+              "name": "Error Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{base_url}}/api/quotes/random"
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "body": {
+                "status": "error",
+                "message": "Quote service is currently unavailable"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+} 
