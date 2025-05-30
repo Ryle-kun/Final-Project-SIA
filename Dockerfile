@@ -20,7 +20,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Install PHP dependencies
 RUN composer self-update --stable
-RUN composer install -W --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader
 
 # Install Node and Vite dependencies
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
