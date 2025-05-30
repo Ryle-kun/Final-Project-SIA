@@ -18,13 +18,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy Laravel app into container
 COPY . .
 
-# Set Apache to serve from Laravel's public directory
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+# ✅ Set Apache to serve from Laravel's public directory
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
+    echo '<Directory /var/www/html/public>\n\tAllowOverride All\n</Directory>' >> /etc/apache2/apache2.conf
 
-# Update Apache to serve Laravel from the public directory
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf \
-    && echo '<Directory /var/www/html/public>\n\tAllowOverride All\n</Directory>' >> /etc/apache2/apache2.conf
-    
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
