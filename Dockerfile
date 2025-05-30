@@ -19,6 +19,7 @@ COPY . .
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Install PHP dependencies
+RUN composer self-update --stable
 RUN composer install -W --no-dev --optimize-autoloader
 
 # Install Node and Vite dependencies
