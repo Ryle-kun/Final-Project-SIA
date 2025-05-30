@@ -12,17 +12,19 @@ RUN a2enmod rewrite
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy app files
-COPY . .
-
-# Install Composer
+# Copy Composer from official image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Copy Laravel app into container
+COPY . .
+
+# Set Apache to serve from Laravel's public directory
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+
 # Install PHP dependencies
-RUN composer self-update --stable
 RUN composer install --no-dev --optimize-autoloader
 
-# Install Node and Vite dependencies
+# Install Node and build Vite assets
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && npm install \
@@ -31,5 +33,5 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
 # Set correct permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expose port
+# Expose port 80
 EXPOSE 80
