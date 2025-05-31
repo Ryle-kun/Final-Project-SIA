@@ -5,7 +5,7 @@ import vue from '@vitejs/plugin-vue';
 export default defineConfig({
   plugins: [
     laravel({
-      input: 'resources/js/app.js',
+      input: ['resources/js/app.js'],
       refresh: true,
     }),
     vue({
@@ -18,8 +18,8 @@ export default defineConfig({
     }),
   ],
   build: {
-    manifest: true,
     outDir: 'public/build',
-    manifestFile: 'manifest.json',  // ensure manifest is placed here
+    manifest: true,
+    emptyOutDir: true, // Cleans old files before each build
   },
 });
