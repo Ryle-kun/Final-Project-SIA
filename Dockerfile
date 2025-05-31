@@ -25,17 +25,27 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /et
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Install Node.js and build assets
+# Install Node.js and build Vite (Vue) assets
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && npm install \
     && npm run build
 
-# Create storage directories
-RUN mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache
+# Ensure Vite outputs to correct path (public/build)
+# Make sure your vite.config.js has: outDir: 'public/build', manifest: true
 
-# Set correct permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
+# Create required directories and fix permissions
+RUN mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache && \
+    chown -R www-data:www-data storage bootstrap/cache public
+
+# Generate Laravel app key (optional if set via .env)
+RUN php artisan key:generate
+
+# Cache config/views/routes
+RUN php artisan config:cache \
+ && php artisan route:cache \
+ && php artisan view:cache
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
@@ -43,17 +53,11 @@ RUN echo '#!/bin/bash\n\
 sleep 5\n\
 # Run migrations\n\
 php artisan migrate --force\n\
-# Create session table if it doesn'\''t exist\n\
-php artisan session:table --force 2>/dev/null || true\n\
-php artisan migrate --force\n\
 # Start Apache\n\
 apache2-foreground' > /start.sh && chmod +x /start.sh
 
 # Expose port 80
 EXPOSE 80
-
-# Run database setup
-RUN php artisan migrate --force || echo "Migration failed, continuing..."
 
 # Use startup script
 CMD ["/start.sh"]
