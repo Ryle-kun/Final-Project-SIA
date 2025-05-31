@@ -1,8 +1,3 @@
-<div>
-  <p>Vue is loaded and working!</p>
-  <!-- your existing content here -->
-</div>
-
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 
