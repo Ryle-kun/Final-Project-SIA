@@ -22,13 +22,6 @@ COPY . .
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
     echo '<Directory /var/www/html/public>\n\tAllowOverride All\n\tRequire all granted\n</Directory>' >> /etc/apache2/apache2.conf
 
-# Configure Apache for proxy headers (important for Render)
-RUN echo 'LoadModule remoteip_module modules/mod_remoteip.so' >> /etc/apache2/apache2.conf && \
-    echo 'RemoteIPHeader X-Forwarded-For' >> /etc/apache2/apache2.conf && \
-    echo 'RemoteIPTrustedProxy 10.0.0.0/8' >> /etc/apache2/apache2.conf && \
-    echo 'RemoteIPTrustedProxy 172.16.0.0/12' >> /etc/apache2/apache2.conf && \
-    echo 'RemoteIPTrustedProxy 192.168.0.0/16' >> /etc/apache2/apache2.conf
-
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
@@ -48,9 +41,6 @@ RUN php artisan key:generate --force
 RUN php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache
-
-# Ensure public/build exists and list contents (for debug)
-RUN echo "Listing contents of public/build:" && ls -la public/build || echo "Build directory not found"
 
 # Set correct permissions for Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
