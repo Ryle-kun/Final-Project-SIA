@@ -3,7 +3,6 @@ import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
-    base: '/build/', // ✅ ensures relative HTTPS asset URLs
     plugins: [
         laravel({
             input: 'resources/js/app.js',
@@ -18,4 +17,8 @@ export default defineConfig({
             },
         }),
     ],
+    build: {
+        manifest: true,
+        outDir: 'public/build',
+    }
 });

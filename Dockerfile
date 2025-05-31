@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y \
     libzip-dev zip libpq-dev gnupg \
     && docker-php-ext-install pdo pdo_mysql zip
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Enable Apache mod_rewrite and headers
+RUN a2enmod rewrite headers
 
 # Set working directory
 WORKDIR /var/www/html
@@ -20,22 +20,43 @@ COPY . .
 
 # Set Apache to serve from Laravel's public directory
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
-    echo '<Directory /var/www/html/public>\n\tAllowOverride All\n</Directory>' >> /etc/apache2/apache2.conf
+    echo '<Directory /var/www/html/public>\n\tAllowOverride All\n\tRequire all granted\n</Directory>' >> /etc/apache2/apache2.conf
+
+# Configure Apache for proxy headers (important for Render)
+RUN echo 'LoadModule remoteip_module modules/mod_remoteip.so' >> /etc/apache2/apache2.conf && \
+    echo 'RemoteIPHeader X-Forwarded-For' >> /etc/apache2/apache2.conf && \
+    echo 'RemoteIPTrustedProxy 10.0.0.0/8' >> /etc/apache2/apache2.conf && \
+    echo 'RemoteIPTrustedProxy 172.16.0.0/12' >> /etc/apache2/apache2.conf && \
+    echo 'RemoteIPTrustedProxy 192.168.0.0/16' >> /etc/apache2/apache2.conf
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Install Node.js and Vite dependencies
+# Install Node.js and build assets
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && npm install \
     && npm run build
 
+# Create .env for production if it doesn't exist
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
+# Generate application key
+RUN php artisan key:generate --force
+
+# Cache Laravel configurations
+RUN php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache
+
 # Ensure public/build exists and list contents (for debug)
-RUN echo "Listing contents of public/build:" && ls -la public/build
+RUN echo "Listing contents of public/build:" && ls -la public/build || echo "Build directory not found"
 
 # Set correct permissions for Laravel
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
 
 # Expose port 80
 EXPOSE 80
+
+# Start Apache in foreground
+CMD ["apache2-foreground"]
