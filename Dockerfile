@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y \
     libzip-dev zip libpq-dev gnupg \
     && docker-php-ext-install pdo pdo_mysql zip
 
-# Enable Apache mod_rewrite and headers
-RUN a2enmod rewrite headers
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
 # Set working directory
 WORKDIR /var/www/html
@@ -31,22 +31,29 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && npm install \
     && npm run build
 
-# Create .env for production if it doesn't exist
-RUN if [ ! -f .env ]; then cp .env.example .env; fi
+# Create storage directories
+RUN mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache
 
-# Generate application key
-RUN php artisan key:generate --force
-
-# Cache Laravel configurations
-RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
-
-# Set correct permissions for Laravel
+# Set correct permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+# Wait for database to be ready\n\
+sleep 5\n\
+# Run migrations\n\
+php artisan migrate --force\n\
+# Create session table if it doesn'\''t exist\n\
+php artisan session:table --force 2>/dev/null || true\n\
+php artisan migrate --force\n\
+# Start Apache\n\
+apache2-foreground' > /start.sh && chmod +x /start.sh
 
 # Expose port 80
 EXPOSE 80
 
-# Start Apache in foreground
-CMD ["apache2-foreground"]
+# Run database setup
+RUN php artisan migrate --force || echo "Migration failed, continuing..."
+
+# Use startup script
+CMD ["/start.sh"]
